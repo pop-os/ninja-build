@@ -1,0 +1,7 @@
+ninja usr/bin
+doc/manual.html usr/share/doc/ninja-build/html
+misc/bash-completion etc/bash_completion.d/
+misc/ninja.vim usr/share/vim/addons/syntax
+misc/ninja-mode.el usr/share/emacs/site-lisp
+misc/zsh-completion usr/share/zsh/functions/Completion/
+

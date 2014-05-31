@@ -1,0 +1,35 @@
+#!/usr/bin/make -f
+
+.PHONY: debian/ninja.1
+
+%:
+	dh $@
+
+debian/ninja.1: debian/ninja.1.in
+	help2man --include=$< --output=$@ --no-info --no-discard-stderr ./ninja
+
+override_dh_auto_configure:
+	./bootstrap.py -- --with-gtest=/usr/src/gtest/
+
+override_dh_auto_build-arch:
+	./ninja -v all
+	./ninja -v manual
+
+override_dh_auto_build-indep:
+	./ninja -v doxygen
+
+override_dh_clean:
+	dh_clean
+	test -x ninja && ./ninja -t clean || true
+	find -type f -iname "*.pyc" | xargs rm -f
+	rm -f doc/doxygen/html/*
+	rm -f build.ninja
+	rm -rf build
+
+override_dh_install-arch:
+	dh_install
+	mv debian/ninja-build/etc/bash_completion.d/bash-completion \
+	   debian/ninja-build/etc/bash_completion.d/ninja
+	mv debian/ninja-build/usr/share/zsh/functions/Completion/zsh-completion \
+	   debian/ninja-build/usr/share/zsh/functions/Completion/_ninja
+
