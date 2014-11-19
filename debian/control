@@ -3,13 +3,13 @@ Section: devel
 Priority: optional
 Maintainer: Gary Kramlich <grim@reaperworld.com>
 Build-Depends: debhelper (>=9), libgtest-dev (>=1.6.0), python, asciidoc,
- hardening-wrapper, re2c, help2man, xsltproc, docbook-xsl | docbook-xsl-ns,
- docbook-xml, doc-base
+ re2c, help2man, xsltproc, docbook-xsl | docbook-xsl-ns, docbook-xml,
+ doc-base, graphviz
 Build-Depends-Indep: doxygen
 Homepage: http://martine.github.com/ninja/
 Vcs-Browser: https://bitbucket.org/rw_grim/ninja-build-debian-packaging/src
 Vcs-Hg: https://bitbucket.org/rw_grim/ninja-build-debian-packaging
-Standards-Version: 3.9.4
+Standards-Version: 3.9.6
 
 Package: ninja-build
 Architecture: any

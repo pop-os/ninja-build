@@ -95,6 +95,21 @@ TEST_F(SubprocessTest, InterruptParent) {
   ADD_FAILURE() << "We should have been interrupted";
 }
 
+TEST_F(SubprocessTest, Console) {
+  // Skip test if we don't have the console ourselves.
+  if (isatty(0) && isatty(1) && isatty(2)) {
+    Subprocess* subproc = subprocs_.Add("test -t 0 -a -t 1 -a -t 2",
+                                        /*use_console=*/true);
+    ASSERT_NE((Subprocess *) 0, subproc);
+
+    while (!subproc->Done()) {
+      subprocs_.DoWork();
+    }
+
+    EXPECT_EQ(ExitSuccess, subproc->Finish());
+  }
+}
+
 #endif
 
 TEST_F(SubprocessTest, SetWithSingle) {
@@ -152,7 +167,7 @@ TEST_F(SubprocessTest, SetWithMulti) {
 
 // OS X's process limit is less than 1025 by default
 // (|sysctl kern.maxprocperuid| is 709 on 10.7 and 10.8 and less prior to that).
-#if defined(linux) || defined(__OpenBSD__)
+#if !defined(__APPLE__) && !defined(_WIN32)
 TEST_F(SubprocessTest, SetWithLots) {
   // Arbitrary big number; needs to be over 1024 to confirm we're no longer
   // hostage to pselect.
@@ -179,7 +194,7 @@ TEST_F(SubprocessTest, SetWithLots) {
   }
   ASSERT_EQ(kNumProcs, subprocs_.finished_.size());
 }
-#endif  // linux || __OpenBSD__
+#endif  // !__APPLE__ && !_WIN32 
 
 // TODO: this test could work on Windows, just not sure how to simply
 // read stdin.

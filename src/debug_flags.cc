@@ -12,16 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NINJA_EXPLAIN_H_
-#define NINJA_EXPLAIN_H_
+bool g_explaining = false;
 
-#include <stdio.h>
+bool g_keep_rsp = false;
 
-#define EXPLAIN(fmt, ...) {                                             \
-  if (g_explaining)                                                     \
-    fprintf(stderr, "ninja explain: " fmt "\n", __VA_ARGS__);           \
-}
-
-extern bool g_explaining;
-
-#endif // NINJA_EXPLAIN_H_
+bool g_experimental_statcache = true;
