@@ -1,7 +1,7 @@
 Ninja
 =====
 Evan Martin <martine@danga.com>
-v1.3.0, May 2013
+v1.5.1, June 2014
 
 
 Introduction
@@ -55,7 +55,7 @@ Here are the design goals of Ninja:
   higher-level build systems have different opinions about how code
   should be built; for example, should built objects live alongside
   the sources or should all build output go into a separate directory?
-  Is there an "package" rule that builds a distributable package of
+  Is there a "package" rule that builds a distributable package of
   the project?  Sidestep these decisions by trying to allow either to
   be implemented, rather than choosing, even if that results in
   more verbosity.
@@ -581,14 +581,19 @@ Ninja supports this processing in two forms.
    http://msdn.microsoft.com/en-us/library/hdkef6tk(v=vs.90).aspx[`/showIncludes`
    flag].  Briefly, this means the tool outputs specially-formatted lines
    to its stdout.  Ninja then filters these lines from the displayed
-   output.  No `depfile` attribute is necessary.
+   output.  No `depfile` attribute is necessary, but the localized string
+   in front of the the header file path. For instance
+   `msvc_deps_prefix = Note: including file: `
+   for a English Visual Studio (the default). Should be globally defined.
 +
 ----
+msvc_deps_prefix = Note: including file:
 rule cc
   deps = msvc
   command = cl /showIncludes -c $in /Fo$out
 ----
 
+[[ref_pool]]
 Pools
 ~~~~~
 
@@ -644,6 +649,21 @@ build heavy_object2.obj: cc heavy_obj2.cc
 
 ----------------
 
+The `console` pool
+^^^^^^^^^^^^^^^^^^
+
+_Available since Ninja 1.5._
+
+There exists a pre-defined pool named `console` with a depth of 1. It has
+the special property that any task in the pool has direct access to the
+standard input, output and error streams provided to Ninja, which are
+normally connected to the user's console (hence the name) but could be
+redirected. This can be useful for interactive tasks or long-running tasks
+which produce status updates on the console (such as test suites).
+
+While a task in the `console` pool is running, Ninja's regular output (such
+as progress status and output from concurrent tasks) is buffered until
+it completes.
 
 Ninja file reference
 --------------------
@@ -668,6 +688,9 @@ A file is a series of declarations.  A declaration can be one of:
 5. References to more files, which look like +subninja _path_+ or
    +include _path_+.  The difference between these is explained below
    <<ref_scope,in the discussion about scoping>>.
+
+6. A pool declaration, which looks like +pool _poolname_+. Pools are explained
+   <<ref_pool, in the section on pools>>.
 
 Lexical syntax
 ~~~~~~~~~~~~~~
@@ -769,6 +792,10 @@ keys.
    stored as `.ninja_deps` in the `builddir`, see <<ref_toplevel,the
    discussion of `builddir`>>.
 
+`msvc_deps_prefix`:: _(Available since Ninja 1.5.)_ defines the string
+  which should be stripped from msvc's /showIncludes output. Only
+  needed when `deps = msvc` and no English Visual Studio version is used.
+
 `description`:: a short description of the command, used to pretty-print
   the command as it's running.  The `-v` flag controls whether to print
   the full command or its description; if a command fails, the full command
@@ -780,9 +807,9 @@ keys.
   rebuilt if the command line changes; and secondly, they are not
   cleaned by default.
 
-`in`:: the shell-quoted space-separated list of files provided as
-  inputs to the build line referencing this `rule`.  (`$in` is provided
-  solely for convenience; if you need some subset or variant of this
+`in`:: the space-separated list of files provided as inputs to the build line
+  referencing this `rule`, shell-quoted if it appears in commands.  (`$in` is
+  provided solely for convenience; if you need some subset or variant of this
   list of files, just construct a new variable with that list and use
   that instead.)
 
@@ -791,8 +818,8 @@ keys.
   `$rspfile_content`; this works around a bug in the MSVC linker where
   it uses a fixed-size buffer for processing input.)
 
-`out`:: the shell-quoted space-separated list of files provided as
-  outputs to the build line referencing this `rule`.
+`out`:: the space-separated list of files provided as outputs to the build line
+  referencing this `rule`, shell-quoted if it appears in commands.
 
 `restat`:: if present, causes Ninja to re-stat the command's outputs
   after execution of the command.  Each output whose modification time

@@ -18,10 +18,10 @@
 #include <stdio.h>
 
 #include "build_log.h"
+#include "debug_flags.h"
 #include "depfile_parser.h"
 #include "deps_log.h"
 #include "disk_interface.h"
-#include "explain.h"
 #include "manifest_parser.h"
 #include "metrics.h"
 #include "state.h"
@@ -60,13 +60,13 @@ bool Rule::IsReservedBinding(const string& var) {
 bool DependencyScan::RecomputeDirty(Edge* edge, string* err) {
   bool dirty = false;
   edge->outputs_ready_ = true;
+  edge->deps_missing_ = false;
 
-  TimeStamp deps_mtime = 0;
-  if (!dep_loader_.LoadDeps(edge, &deps_mtime, err)) {
+  if (!dep_loader_.LoadDeps(edge, err)) {
     if (!err->empty())
       return false;
     // Failed to load dependency info: rebuild to regenerate it.
-    dirty = true;
+    dirty = edge->deps_missing_ = true;
   }
 
   // Visit all inputs; we're dirty if any of the inputs are dirty.
@@ -107,19 +107,8 @@ bool DependencyScan::RecomputeDirty(Edge* edge, string* err) {
 
   // We may also be dirty due to output state: missing outputs, out of
   // date outputs, etc.  Visit all outputs and determine whether they're dirty.
-  if (!dirty) {
-    string command = edge->EvaluateCommand(true);
-
-    for (vector<Node*>::iterator i = edge->outputs_.begin();
-         i != edge->outputs_.end(); ++i) {
-      (*i)->StatIfNecessary(disk_interface_);
-      if (RecomputeOutputDirty(edge, most_recent_input, deps_mtime,
-                               command, *i)) {
-        dirty = true;
-        break;
-      }
-    }
-  }
+  if (!dirty)
+    dirty = RecomputeOutputsDirty(edge, most_recent_input);
 
   // Finally, visit each output to mark off that we've visited it, and update
   // their dirty state if necessary.
@@ -141,9 +130,20 @@ bool DependencyScan::RecomputeDirty(Edge* edge, string* err) {
   return true;
 }
 
+bool DependencyScan::RecomputeOutputsDirty(Edge* edge,
+                                           Node* most_recent_input) {   
+  string command = edge->EvaluateCommand(true);
+  for (vector<Node*>::iterator i = edge->outputs_.begin();
+       i != edge->outputs_.end(); ++i) {
+    (*i)->StatIfNecessary(disk_interface_);
+    if (RecomputeOutputDirty(edge, most_recent_input, command, *i))
+      return true;
+  }
+  return false;
+}
+
 bool DependencyScan::RecomputeOutputDirty(Edge* edge,
                                           Node* most_recent_input,
-                                          TimeStamp deps_mtime,
                                           const string& command,
                                           Node* output) {
   if (edge->is_phony()) {
@@ -185,13 +185,6 @@ bool DependencyScan::RecomputeOutputDirty(Edge* edge,
     }
   }
 
-  // Dirty if the output is newer than the deps.
-  if (deps_mtime && output->mtime() > deps_mtime) {
-    EXPLAIN("stored deps info out of date for for %s (%d vs %d)",
-            output->path().c_str(), deps_mtime, output->mtime());
-    return true;
-  }
-
   // May also be dirty due to the command changing since the last build.
   // But if this is a generator rule, the command changing does not make us
   // dirty.
@@ -222,7 +215,10 @@ bool Edge::AllInputsReady() const {
 
 /// An Env for an Edge, providing $in and $out.
 struct EdgeEnv : public Env {
-  explicit EdgeEnv(Edge* edge) : edge_(edge) {}
+  enum EscapeKind { kShellEscape, kDoNotEscape };
+
+  explicit EdgeEnv(Edge* edge, EscapeKind escape)
+      : edge_(edge), escape_in_out_(escape) {}
   virtual string LookupVariable(const string& var);
 
   /// Given a span of Nodes, construct a list of paths suitable for a command
@@ -232,6 +228,7 @@ struct EdgeEnv : public Env {
                       char sep);
 
   Edge* edge_;
+  EscapeKind escape_in_out_;
 };
 
 string EdgeEnv::LookupVariable(const string& var) {
@@ -260,10 +257,12 @@ string EdgeEnv::MakePathList(vector<Node*>::iterator begin,
     if (!result.empty())
       result.push_back(sep);
     const string& path = (*i)->path();
-    if (path.find(" ") != string::npos) {
-      result.append("\"");
-      result.append(path);
-      result.append("\"");
+    if (escape_in_out_ == kShellEscape) {
+#if _WIN32
+      GetWin32EscapedString(path, &result);
+#else
+      GetShellEscapedString(path, &result);
+#endif
     } else {
       result.append(path);
     }
@@ -282,12 +281,22 @@ string Edge::EvaluateCommand(bool incl_rsp_file) {
 }
 
 string Edge::GetBinding(const string& key) {
-  EdgeEnv env(this);
+  EdgeEnv env(this, EdgeEnv::kShellEscape);
   return env.LookupVariable(key);
 }
 
 bool Edge::GetBindingBool(const string& key) {
   return !GetBinding(key).empty();
+}
+
+string Edge::GetUnescapedDepfile() {
+  EdgeEnv env(this, EdgeEnv::kDoNotEscape);
+  return env.LookupVariable("depfile");
+}
+
+string Edge::GetUnescapedRspfile() {
+  EdgeEnv env(this, EdgeEnv::kDoNotEscape);
+  return env.LookupVariable("rspfile");
 }
 
 void Edge::Dump(const char* prefix) const {
@@ -315,6 +324,10 @@ bool Edge::is_phony() const {
   return rule_ == &State::kPhonyRule;
 }
 
+bool Edge::use_console() const {
+  return pool() == &State::kConsolePool;
+}
+
 void Node::Dump(const char* prefix) const {
   printf("%s <%s 0x%p> mtime: %d%s, (:%s), ",
          prefix, path().c_str(), this,
@@ -332,28 +345,14 @@ void Node::Dump(const char* prefix) const {
   }
 }
 
-bool ImplicitDepLoader::LoadDeps(Edge* edge, TimeStamp* mtime, string* err) {
+bool ImplicitDepLoader::LoadDeps(Edge* edge, string* err) {
   string deps_type = edge->GetBinding("deps");
-  if (!deps_type.empty()) {
-    if (!LoadDepsFromLog(edge, mtime, err)) {
-      if (!err->empty())
-        return false;
-      EXPLAIN("deps for %s are missing", edge->outputs_[0]->path().c_str());
-      return false;
-    }
-    return true;
-  }
+  if (!deps_type.empty())
+    return LoadDepsFromLog(edge, err);
 
-  string depfile = edge->GetBinding("depfile");
-  if (!depfile.empty()) {
-    if (!LoadDepFile(edge, depfile, err)) {
-      if (!err->empty())
-        return false;
-      EXPLAIN("depfile '%s' is missing", depfile.c_str());
-      return false;
-    }
-    return true;
-  }
+  string depfile = edge->GetUnescapedDepfile();
+  if (!depfile.empty())
+    return LoadDepFile(edge, depfile, err);
 
   // No deps to load.
   return true;
@@ -368,8 +367,10 @@ bool ImplicitDepLoader::LoadDepFile(Edge* edge, const string& path,
     return false;
   }
   // On a missing depfile: return false and empty *err.
-  if (content.empty())
+  if (content.empty()) {
+    EXPLAIN("depfile '%s' is missing", path.c_str());
     return false;
+  }
 
   DepfileParser depfile;
   string depfile_err;
@@ -406,20 +407,29 @@ bool ImplicitDepLoader::LoadDepFile(Edge* edge, const string& path,
   return true;
 }
 
-bool ImplicitDepLoader::LoadDepsFromLog(Edge* edge, TimeStamp* deps_mtime,
-                                        string* err) {
-  DepsLog::Deps* deps = deps_log_->GetDeps(edge->outputs_[0]);
-  if (!deps)
+bool ImplicitDepLoader::LoadDepsFromLog(Edge* edge, string* err) {
+  // NOTE: deps are only supported for single-target edges.
+  Node* output = edge->outputs_[0];
+  DepsLog::Deps* deps = deps_log_->GetDeps(output);
+  if (!deps) {
+    EXPLAIN("deps for '%s' are missing", output->path().c_str());
     return false;
+  }
 
-  *deps_mtime = deps->mtime;
+  // Deps are invalid if the output is newer than the deps.
+  if (output->mtime() > deps->mtime) {
+    EXPLAIN("stored deps info out of date for for '%s' (%d vs %d)",
+            output->path().c_str(), deps->mtime, output->mtime());
+    return false;
+  }
 
   vector<Node*>::iterator implicit_dep =
       PreallocateSpace(edge, deps->node_count);
   for (int i = 0; i < deps->node_count; ++i, ++implicit_dep) {
-    *implicit_dep = deps->nodes[i];
-    deps->nodes[i]->AddOutEdge(edge);
-    CreatePhonyInEdge(*implicit_dep);
+    Node* node = deps->nodes[i];
+    *implicit_dep = node;
+    node->AddOutEdge(edge);
+    CreatePhonyInEdge(node);
   }
   return true;
 }

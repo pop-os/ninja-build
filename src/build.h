@@ -51,7 +51,7 @@ struct Plan {
   Edge* FindWork();
 
   /// Returns true if there's more work to be done.
-  bool more_to_do() const { return wanted_edges_; }
+  bool more_to_do() const { return wanted_edges_ > 0 && command_edges_ > 0; }
 
   /// Dumps the current state of the plan.
   void Dump();
@@ -163,7 +163,10 @@ struct Builder {
   bool Build(string* err);
 
   bool StartEdge(Edge* edge, string* err);
-  void FinishCommand(CommandRunner::Result* result);
+
+  /// Update status ninja logs following a command termination.
+  /// @return false if the build can not proceed further due to a fatal error.
+  bool FinishCommand(CommandRunner::Result* result, string* err);
 
   /// Used for tests.
   void SetBuildLog(BuildLog* log) {
@@ -177,8 +180,9 @@ struct Builder {
   BuildStatus* status_;
 
  private:
-  bool ExtractDeps(CommandRunner::Result* result, const string& deps_type,
-                   vector<Node*>* deps_nodes, string* err);
+   bool ExtractDeps(CommandRunner::Result* result, const string& deps_type,
+                    const string& deps_prefix, vector<Node*>* deps_nodes,
+                    string* err);
 
   DiskInterface* disk_interface_;
   DependencyScan scan_;
