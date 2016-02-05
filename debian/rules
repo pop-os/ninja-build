@@ -5,15 +5,13 @@
 %:
 	dh $@
 
-debian/ninja.1: debian/ninja.1.in
-	help2man --include=$< --output=$@ --no-info --no-discard-stderr ./ninja
-
 override_dh_auto_configure:
 	./bootstrap.py -- --with-gtest=/usr/src/gtest/
 
 override_dh_auto_build-arch:
 	./ninja -v all
 	./ninja -v manual
+	help2man --include=debian/ninja.1.in --output=debian/ninja.1 --no-info --no-discard-stderr ./ninja
 
 override_dh_auto_build-indep:
 	./ninja -v doxygen
