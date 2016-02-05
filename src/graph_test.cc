@@ -251,3 +251,99 @@ TEST_F(GraphTest, NestedPhonyPrintsDone) {
   EXPECT_EQ(0, plan_.command_edge_count());
   ASSERT_FALSE(plan_.more_to_do());
 }
+
+// Verify that cycles in graphs with multiple outputs are handled correctly
+// in RecomputeDirty() and don't cause deps to be loaded multiple times.
+TEST_F(GraphTest, CycleWithLengthZeroFromDepfile) {
+  AssertParse(&state_,
+"rule deprule\n"
+"   depfile = dep.d\n"
+"   command = unused\n"
+"build a b: deprule\n"
+  );
+  fs_.Create("dep.d", "a: b\n");
+
+  string err;
+  Edge* edge = GetNode("a")->in_edge();
+  EXPECT_TRUE(scan_.RecomputeDirty(edge, &err));
+  ASSERT_EQ("", err);
+
+  // Despite the depfile causing edge to be a cycle (it has outputs a and b,
+  // but the depfile also adds b as an input), the deps should have been loaded
+  // only once:
+  EXPECT_EQ(1, edge->inputs_.size());
+  EXPECT_EQ("b", edge->inputs_[0]->path());
+}
+
+// Like CycleWithLengthZeroFromDepfile but with a higher cycle length.
+TEST_F(GraphTest, CycleWithLengthOneFromDepfile) {
+  AssertParse(&state_,
+"rule deprule\n"
+"   depfile = dep.d\n"
+"   command = unused\n"
+"rule r\n"
+"   command = unused\n"
+"build a b: deprule\n"
+"build c: r b\n"
+  );
+  fs_.Create("dep.d", "a: c\n");
+
+  string err;
+  Edge* edge = GetNode("a")->in_edge();
+  EXPECT_TRUE(scan_.RecomputeDirty(edge, &err));
+  ASSERT_EQ("", err);
+
+  // Despite the depfile causing edge to be a cycle (|edge| has outputs a and b,
+  // but c's in_edge has b as input but the depfile also adds |edge| as
+  // output)), the deps should have been loaded only once:
+  EXPECT_EQ(1, edge->inputs_.size());
+  EXPECT_EQ("c", edge->inputs_[0]->path());
+}
+
+// Like CycleWithLengthOneFromDepfile but building a node one hop away from
+// the cycle.
+TEST_F(GraphTest, CycleWithLengthOneFromDepfileOneHopAway) {
+  AssertParse(&state_,
+"rule deprule\n"
+"   depfile = dep.d\n"
+"   command = unused\n"
+"rule r\n"
+"   command = unused\n"
+"build a b: deprule\n"
+"build c: r b\n"
+"build d: r a\n"
+  );
+  fs_.Create("dep.d", "a: c\n");
+
+  string err;
+  EXPECT_TRUE(scan_.RecomputeDirty(GetNode("d")->in_edge(), &err));
+  ASSERT_EQ("", err);
+
+  // Despite the depfile causing edge to be a cycle (|edge| has outputs a and b,
+  // but c's in_edge has b as input but the depfile also adds |edge| as
+  // output)), the deps should have been loaded only once:
+  Edge* edge = GetNode("a")->in_edge();
+  EXPECT_EQ(1, edge->inputs_.size());
+  EXPECT_EQ("c", edge->inputs_[0]->path());
+}
+
+#ifdef _WIN32
+TEST_F(GraphTest, Decanonicalize) {
+  ASSERT_NO_FATAL_FAILURE(AssertParse(&state_,
+"build out\\out1: cat src\\in1\n"
+"build out\\out2/out3\\out4: cat mid1\n"
+"build out3 out4\\foo: cat mid1\n"));
+
+  string err;
+  vector<Node*> root_nodes = state_.RootNodes(&err);
+  EXPECT_EQ(4u, root_nodes.size());
+  EXPECT_EQ(root_nodes[0]->path(), "out/out1");
+  EXPECT_EQ(root_nodes[1]->path(), "out/out2/out3/out4");
+  EXPECT_EQ(root_nodes[2]->path(), "out3");
+  EXPECT_EQ(root_nodes[3]->path(), "out4/foo");
+  EXPECT_EQ(root_nodes[0]->PathDecanonicalized(), "out\\out1");
+  EXPECT_EQ(root_nodes[1]->PathDecanonicalized(), "out\\out2/out3\\out4");
+  EXPECT_EQ(root_nodes[2]->PathDecanonicalized(), "out3");
+  EXPECT_EQ(root_nodes[3]->PathDecanonicalized(), "out4\\foo");
+}
+#endif

@@ -33,22 +33,22 @@ struct State;
 /// Information about a node in the dependency graph: the file, whether
 /// it's dirty, mtime, etc.
 struct Node {
-  explicit Node(const string& path)
+  Node(const string& path, unsigned int slash_bits)
       : path_(path),
+        slash_bits_(slash_bits),
         mtime_(-1),
         dirty_(false),
         in_edge_(NULL),
         id_(-1) {}
 
-  /// Return true if the file exists (mtime_ got a value).
-  bool Stat(DiskInterface* disk_interface);
+  /// Return false on error.
+  bool Stat(DiskInterface* disk_interface, string* err);
 
-  /// Return true if we needed to stat.
-  bool StatIfNecessary(DiskInterface* disk_interface) {
+  /// Return false on error.
+  bool StatIfNecessary(DiskInterface* disk_interface, string* err) {
     if (status_known())
-      return false;
-    Stat(disk_interface);
-    return true;
+      return true;
+    return Stat(disk_interface, err);
   }
 
   /// Mark as not-yet-stat()ed and not dirty.
@@ -71,6 +71,9 @@ struct Node {
   }
 
   const string& path() const { return path_; }
+  /// Get |path()| but use slash_bits to convert back to original slash styles.
+  string PathDecanonicalized() const;
+  unsigned int slash_bits() const { return slash_bits_; }
   TimeStamp mtime() const { return mtime_; }
 
   bool dirty() const { return dirty_; }
@@ -90,6 +93,11 @@ struct Node {
 
 private:
   string path_;
+
+  /// Set bits starting from lowest for backslashes that were normalized to
+  /// forward slashes by CanonicalizePath. See |PathDecanonicalized|.
+  unsigned int slash_bits_;
+
   /// Possible values of mtime_:
   ///   -1: file hasn't been examined
   ///   0:  we looked, and file doesn't exist
@@ -112,30 +120,10 @@ private:
   int id_;
 };
 
-/// An invokable build command and associated metadata (description, etc.).
-struct Rule {
-  explicit Rule(const string& name) : name_(name) {}
-
-  const string& name() const { return name_; }
-
-  typedef map<string, EvalString> Bindings;
-  void AddBinding(const string& key, const EvalString& val);
-
-  static bool IsReservedBinding(const string& var);
-
-  const EvalString* GetBinding(const string& key) const;
-
- private:
-  // Allow the parsers to reach into this object and fill out its fields.
-  friend struct ManifestParser;
-
-  string name_;
-  map<string, EvalString> bindings_;
-};
-
 /// An edge in the dependency graph; links between Nodes using Rules.
 struct Edge {
-  Edge() : rule_(NULL), env_(NULL), outputs_ready_(false), deps_missing_(false),
+  Edge() : rule_(NULL), pool_(NULL), env_(NULL),
+           outputs_ready_(false), deps_missing_(false),
            implicit_deps_(0), order_only_deps_(0) {}
 
   /// Return true if all inputs' in-edges are ready.
@@ -248,9 +236,10 @@ struct DependencyScan {
   /// Returns false on failure.
   bool RecomputeDirty(Edge* edge, string* err);
 
-  /// Recompute whether any output of the edge is dirty.
-  /// Returns true if so.
-  bool RecomputeOutputsDirty(Edge* edge, Node* most_recent_input);
+  /// Recompute whether any output of the edge is dirty, if so sets |*dirty|.
+  /// Returns false on failure.
+  bool RecomputeOutputsDirty(Edge* edge, Node* most_recent_input,
+                             bool* dirty, string* err);
 
   BuildLog* build_log() const {
     return build_log_;

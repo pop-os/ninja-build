@@ -7,10 +7,6 @@ The primary build target of interest is `ninja`, but when hacking on
 Ninja your changes should be testable so it's more useful to build
 and run `ninja_test` when developing.
 
-(`./bootstrap.py` creates a bootstrap `ninja` and runs the above
-process; it's only necessary to run if you don't have a copy of
-`ninja` to build with.)
-
 ### Adjusting build flags
 
 Build in "debug" mode while developing (disables optimizations and builds
@@ -49,26 +45,6 @@ discuss new feature ideas on the mailing list before I shoot down your
 patch.
 
 ## Testing
-
-### Installing gtest
-
-The `ninja_test` binary, containing all the tests, depends on the
-googletest (gtest) library.
-
-* On older Ubuntus it'll install as libraries into `/usr/lib`:
-
-        apt-get install libgtest
-
-* On newer Ubuntus it's only distributed as source
-
-        apt-get install libgtest-dev
-        ./configure.py --with-gtest=/usr/src/gtest
-
-* Otherwise you need to download it, unpack it, and pass
-  `--with-gtest` to `configure.py`.  Get it from [its downloads
-  page](http://code.google.com/p/googletest/downloads/list); [this
-  direct download link might work
-  too](http://googletest.googlecode.com/files/gtest-1.6.0.zip).
 
 ### Test-driven development
 
@@ -146,14 +122,15 @@ it's locked while in use.
 
 * Install Visual Studio (Express is fine), [Python for Windows][],
   and (if making changes) googletest (see above instructions)
-* In a Visual Studio command prompt: `python bootstrap.py`
+* In a Visual Studio command prompt: `python configure.py --bootstrap`
 
 [Python for Windows]: http://www.python.org/getit/windows/
 
 ### Via mingw on Windows (not well supported)
 
 * Install mingw, msys, and python
-* In the mingw shell, put Python in your path, and `python bootstrap.py`
+* In the mingw shell, put Python in your path, and
+  `python configure.py --bootstrap`
 * To reconfigure, run `python configure.py`
 * Remember to strip the resulting executable if size matters to you
 
@@ -167,6 +144,12 @@ Setup on Ubuntu Precise:
 * `sudo apt-get install gcc-mingw-w64-i686 g++-mingw-w64-i686 wine`
 * `export CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++ AR=i686-w64-mingw32-ar`
 
+Setup on Arch:
+* Uncomment the `[multilib]` section of `/etc/pacman.conf` and `sudo pacman -Sy`.
+* `sudo pacman -S mingw-w64-gcc wine`
+* `export CC=x86_64-w64-mingw32-cc CXX=x86_64-w64-mingw32-c++ AR=x86_64-w64-mingw32-ar`
+* `export CFLAGS=-I/usr/x86_64-w64-mingw32/include`
+
 Then run:
 * `./configure.py --platform=mingw --host=linux`
 * Build `ninja.exe` using a Linux ninja binary: `/path/to/linux/ninja`
@@ -178,3 +161,49 @@ The trick is to install just the compilers, and not all of Visual Studio,
 by following [these instructions][win7sdk].
 
 [win7sdk]: http://www.kegel.com/wine/cl-howto-win7sdk.html
+
+### Using gcov
+
+Do a clean debug build with the right flags:
+
+    CFLAGS=-coverage LDFLAGS=-coverage ./configure.py --debug
+    ninja -t clean ninja_test && ninja ninja_test
+
+Run the test binary to generate `.gcda` and `.gcno` files in the build
+directory, then run gcov on the .o files to generate `.gcov` files in the
+root directory:
+
+    ./ninja_test
+    gcov build/*.o
+
+Look at the generated `.gcov` files directly, or use your favorit gcov viewer.
+
+### Using afl-fuzz
+
+Build with afl-clang++:
+
+    CXX=path/to/afl-1.20b/afl-clang++ ./configure.py
+    ninja
+
+Then run afl-fuzz like so:
+
+    afl-fuzz -i misc/afl-fuzz -o /tmp/afl-fuzz-out ./ninja -n -f @@
+
+You can pass `-x misc/afl-fuzz-tokens` to use the token dictionary. In my
+testing, that did not seem more effective though.
+
+#### Using afl-fuzz with asan
+
+If you want to use asan (the `isysroot` bit is only needed on OS X; if clang
+can't find C++ standard headers make sure your LLVM checkout includes a libc++
+checkout and has libc++ installed in the build directory):
+
+    CFLAGS="-fsanitize=address -isysroot $(xcrun -show-sdk-path)" \
+        LDFLAGS=-fsanitize=address CXX=path/to/afl-1.20b/afl-clang++ \
+        ./configure.py
+    AFL_CXX=path/to/clang++ ninja
+
+Make sure ninja can find the asan runtime:
+
+    DYLD_LIBRARY_PATH=path/to//lib/clang/3.7.0/lib/darwin/ \
+        afl-fuzz -i misc/afl-fuzz -o /tmp/afl-fuzz-out ./ninja -n -f @@
