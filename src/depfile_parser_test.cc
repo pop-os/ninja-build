@@ -14,7 +14,7 @@
 
 #include "depfile_parser.h"
 
-#include <gtest/gtest.h>
+#include "test.h"
 
 struct DepfileParserTest : public testing::Test {
   bool Parse(const char* input, string* err);
@@ -106,7 +106,7 @@ TEST_F(DepfileParserTest, Escapes) {
   // it through.
   string err;
   EXPECT_TRUE(Parse(
-"\\!\\@\\#$$\\%\\^\\&\\\\",
+"\\!\\@\\#$$\\%\\^\\&\\\\:",
       &err));
   ASSERT_EQ("", err);
   EXPECT_EQ("\\!\\@#$\\%\\^\\&\\",

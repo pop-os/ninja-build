@@ -17,18 +17,18 @@
 #include <map>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include "graph.h"
 #include "state.h"
+#include "test.h"
 
 struct ParserTest : public testing::Test,
                     public ManifestParser::FileReader {
   void AssertParse(const char* input) {
     ManifestParser parser(&state, this);
     string err;
-    ASSERT_TRUE(parser.ParseTest(input, &err)) << err;
+    EXPECT_TRUE(parser.ParseTest(input, &err));
     ASSERT_EQ("", err);
+    VerifyGraph(state);
   }
 
   virtual bool ReadFile(const string& path, string* content, string* err) {
@@ -61,8 +61,8 @@ TEST_F(ParserTest, Rules) {
 "\n"
 "build result: cat in_1.cc in-2.O\n"));
 
-  ASSERT_EQ(3u, state.rules_.size());
-  const Rule* rule = state.rules_.begin()->second;
+  ASSERT_EQ(3u, state.bindings_.GetRules().size());
+  const Rule* rule = state.bindings_.GetRules().begin()->second;
   EXPECT_EQ("cat", rule->name());
   EXPECT_EQ("[cat ][$in][ > ][$out]",
             rule->GetBinding("command")->Serialize());
@@ -94,10 +94,10 @@ TEST_F(ParserTest, IgnoreIndentedComments) {
 "build result: cat in_1.cc in-2.O\n"
 "  #comment\n"));
 
-  ASSERT_EQ(2u, state.rules_.size());
-  const Rule* rule = state.rules_.begin()->second;
+  ASSERT_EQ(2u, state.bindings_.GetRules().size());
+  const Rule* rule = state.bindings_.GetRules().begin()->second;
   EXPECT_EQ("cat", rule->name());
-  Edge* edge = state.GetNode("result")->in_edge();
+  Edge* edge = state.GetNode("result", 0)->in_edge();
   EXPECT_TRUE(edge->GetBindingBool("restat"));
   EXPECT_FALSE(edge->GetBindingBool("generator"));
 }
@@ -127,8 +127,8 @@ TEST_F(ParserTest, ResponseFiles) {
 "build out: cat_rsp in\n"
 "  rspfile=out.rsp\n"));
 
-  ASSERT_EQ(2u, state.rules_.size());
-  const Rule* rule = state.rules_.begin()->second;
+  ASSERT_EQ(2u, state.bindings_.GetRules().size());
+  const Rule* rule = state.bindings_.GetRules().begin()->second;
   EXPECT_EQ("cat_rsp", rule->name());
   EXPECT_EQ("[cat ][$rspfile][ > ][$out]",
             rule->GetBinding("command")->Serialize());
@@ -144,8 +144,8 @@ TEST_F(ParserTest, InNewline) {
 "build out: cat_rsp in in2\n"
 "  rspfile=out.rsp\n"));
 
-  ASSERT_EQ(2u, state.rules_.size());
-  const Rule* rule = state.rules_.begin()->second;
+  ASSERT_EQ(2u, state.bindings_.GetRules().size());
+  const Rule* rule = state.bindings_.GetRules().begin()->second;
   EXPECT_EQ("cat_rsp", rule->name());
   EXPECT_EQ("[cat ][$in_newline][ > ][$out]",
             rule->GetBinding("command")->Serialize());
@@ -205,8 +205,8 @@ TEST_F(ParserTest, Continuation) {
 "build a: link c $\n"
 " d e f\n"));
 
-  ASSERT_EQ(2u, state.rules_.size());
-  const Rule* rule = state.rules_.begin()->second;
+  ASSERT_EQ(2u, state.bindings_.GetRules().size());
+  const Rule* rule = state.bindings_.GetRules().begin()->second;
   EXPECT_EQ("link", rule->name());
   EXPECT_EQ("[foo bar baz]", rule->GetBinding("command")->Serialize());
 }
@@ -270,6 +270,26 @@ TEST_F(ParserTest, CanonicalizeFile) {
   EXPECT_FALSE(state.LookupNode("in//2"));
 }
 
+#ifdef _WIN32
+TEST_F(ParserTest, CanonicalizeFileBackslashes) {
+  ASSERT_NO_FATAL_FAILURE(AssertParse(
+"rule cat\n"
+"  command = cat $in > $out\n"
+"build out: cat in\\1 in\\\\2\n"
+"build in\\1: cat\n"
+"build in\\2: cat\n"));
+
+  Node* node = state.LookupNode("in/1");;
+  EXPECT_TRUE(node);
+  EXPECT_EQ(1, node->slash_bits());
+  node = state.LookupNode("in/2");
+  EXPECT_TRUE(node);
+  EXPECT_EQ(1, node->slash_bits());
+  EXPECT_FALSE(state.LookupNode("in//1"));
+  EXPECT_FALSE(state.LookupNode("in//2"));
+}
+#endif
+
 TEST_F(ParserTest, PathVariables) {
   ASSERT_NO_FATAL_FAILURE(AssertParse(
 "rule cat\n"
@@ -291,6 +311,70 @@ TEST_F(ParserTest, CanonicalizePaths) {
   EXPECT_TRUE(state.LookupNode("out.o"));
   EXPECT_FALSE(state.LookupNode("./bar/baz/../foo.cc"));
   EXPECT_TRUE(state.LookupNode("bar/foo.cc"));
+}
+
+#ifdef _WIN32
+TEST_F(ParserTest, CanonicalizePathsBackslashes) {
+  ASSERT_NO_FATAL_FAILURE(AssertParse(
+"rule cat\n"
+"  command = cat $in > $out\n"
+"build ./out.o: cat ./bar/baz/../foo.cc\n"
+"build .\\out2.o: cat .\\bar/baz\\..\\foo.cc\n"
+"build .\\out3.o: cat .\\bar\\baz\\..\\foo3.cc\n"
+));
+
+  EXPECT_FALSE(state.LookupNode("./out.o"));
+  EXPECT_FALSE(state.LookupNode(".\\out2.o"));
+  EXPECT_FALSE(state.LookupNode(".\\out3.o"));
+  EXPECT_TRUE(state.LookupNode("out.o"));
+  EXPECT_TRUE(state.LookupNode("out2.o"));
+  EXPECT_TRUE(state.LookupNode("out3.o"));
+  EXPECT_FALSE(state.LookupNode("./bar/baz/../foo.cc"));
+  EXPECT_FALSE(state.LookupNode(".\\bar/baz\\..\\foo.cc"));
+  EXPECT_FALSE(state.LookupNode(".\\bar/baz\\..\\foo3.cc"));
+  Node* node = state.LookupNode("bar/foo.cc");
+  EXPECT_TRUE(node);
+  EXPECT_EQ(0, node->slash_bits());
+  node = state.LookupNode("bar/foo3.cc");
+  EXPECT_TRUE(node);
+  EXPECT_EQ(1, node->slash_bits());
+}
+#endif
+
+TEST_F(ParserTest, DuplicateEdgeWithMultipleOutputs) {
+  ASSERT_NO_FATAL_FAILURE(AssertParse(
+"rule cat\n"
+"  command = cat $in > $out\n"
+"build out1 out2: cat in1\n"
+"build out1: cat in2\n"
+"build final: cat out1\n"
+));
+  // AssertParse() checks that the generated build graph is self-consistent.
+  // That's all the checking that this test needs.
+}
+
+TEST_F(ParserTest, NoDeadPointerFromDuplicateEdge) {
+  ASSERT_NO_FATAL_FAILURE(AssertParse(
+"rule cat\n"
+"  command = cat $in > $out\n"
+"build out: cat in\n"
+"build out: cat in\n"
+));
+  // AssertParse() checks that the generated build graph is self-consistent.
+  // That's all the checking that this test needs.
+}
+
+TEST_F(ParserTest, DuplicateEdgeWithMultipleOutputsError) {
+  const char kInput[] =
+"rule cat\n"
+"  command = cat $in > $out\n"
+"build out1 out2: cat in1\n"
+"build out1: cat in2\n"
+"build final: cat out1\n";
+  ManifestParser parser(&state, this, /*dupe_edges_should_err=*/true);
+  string err;
+  EXPECT_FALSE(parser.ParseTest(kInput, &err));
+  EXPECT_EQ("input:5: multiple rules generate out1 [-w dupbuild=err]\n", err);
 }
 
 TEST_F(ParserTest, ReservedWords) {
@@ -553,6 +637,15 @@ TEST_F(ParserTest, Errors) {
     State state;
     ManifestParser parser(&state, NULL);
     string err;
+    EXPECT_FALSE(parser.ParseTest("rule cc\n  command = foo\n  && bar",
+                                  &err));
+    EXPECT_EQ("input:3: expected variable name\n", err);
+  }
+
+  {
+    State state;
+    ManifestParser parser(&state, NULL);
+    string err;
     EXPECT_FALSE(parser.ParseTest("rule cc\n  command = foo\n"
                                   "build $: cc bar.cc\n",
                                   &err));
@@ -767,18 +860,27 @@ TEST_F(ParserTest, MissingSubNinja) {
 }
 
 TEST_F(ParserTest, DuplicateRuleInDifferentSubninjas) {
-  // Test that rules live in a global namespace and aren't scoped to subninjas.
+  // Test that rules are scoped to subninjas.
   files_["test.ninja"] = "rule cat\n"
                          "  command = cat\n";
   ManifestParser parser(&state, this);
   string err;
-  EXPECT_FALSE(parser.ParseTest("rule cat\n"
+  EXPECT_TRUE(parser.ParseTest("rule cat\n"
                                 "  command = cat\n"
                                 "subninja test.ninja\n", &err));
-  EXPECT_EQ("test.ninja:1: duplicate rule 'cat'\n"
-            "rule cat\n"
-            "        ^ near here"
-            , err);
+}
+
+TEST_F(ParserTest, DuplicateRuleInDifferentSubninjasWithInclude) {
+  // Test that rules are scoped to subninjas even with includes.
+  files_["rules.ninja"] = "rule cat\n"
+                         "  command = cat\n";
+  files_["test.ninja"] = "include rules.ninja\n"
+                         "build x : cat\n";
+  ManifestParser parser(&state, this);
+  string err;
+  EXPECT_TRUE(parser.ParseTest("include rules.ninja\n"
+                                "subninja test.ninja\n"
+                                "build y : cat\n", &err));
 }
 
 TEST_F(ParserTest, Include) {
@@ -835,6 +937,16 @@ TEST_F(ParserTest, DefaultDefault) {
   EXPECT_EQ("", err);
 }
 
+TEST_F(ParserTest, DefaultDefaultCycle) {
+  ASSERT_NO_FATAL_FAILURE(AssertParse(
+"rule cat\n  command = cat $in > $out\n"
+"build a: cat a\n"));
+
+  string err;
+  EXPECT_EQ(0u, state.DefaultNodes(&err).size());
+  EXPECT_EQ("could not determine root nodes of build graph", err);
+}
+
 TEST_F(ParserTest, DefaultStatements) {
   ASSERT_NO_FATAL_FAILURE(AssertParse(
 "rule cat\n  command = cat $in > $out\n"
@@ -862,22 +974,18 @@ TEST_F(ParserTest, UTF8) {
 "  description = compilaci\xC3\xB3\n"));
 }
 
-// We might want to eventually allow CRLF to be nice to Windows developers,
-// but for now just verify we error out with a nice message.
 TEST_F(ParserTest, CRLF) {
   State state;
   ManifestParser parser(&state, NULL);
   string err;
 
-  EXPECT_FALSE(parser.ParseTest("# comment with crlf\r\n",
-                                &err));
-  EXPECT_EQ("input:1: lexing error\n",
-            err);
-
-  EXPECT_FALSE(parser.ParseTest("foo = foo\nbar = bar\r\n",
-                                &err));
-  EXPECT_EQ("input:2: carriage returns are not allowed, use newlines\n"
-            "bar = bar\r\n"
-            "         ^ near here",
-            err);
+  EXPECT_TRUE(parser.ParseTest("# comment with crlf\r\n", &err));
+  EXPECT_TRUE(parser.ParseTest("foo = foo\nbar = bar\r\n", &err));
+  EXPECT_TRUE(parser.ParseTest(
+      "pool link_pool\r\n"
+      "  depth = 15\r\n\r\n"
+      "rule xyz\r\n"
+      "  command = something$expand \r\n"
+      "  description = YAY!\r\n",
+      &err));
 }
