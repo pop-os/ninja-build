@@ -2,6 +2,7 @@ ninja-build (1.5.1-1) UNRELEASED; urgency=medium
 
   * New maintainer. (Closes: #810025)
   * Generate man page on every build. (Closes: #776605)
+  * Fix value of default parallel level in man page. (Closes: #795747)
 
  -- Felix Geyer <fgeyer@debian.org>  Thu, 04 Feb 2016 22:24:18 +0100
 
