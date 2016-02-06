@@ -6,7 +6,7 @@
 	dh $@
 
 override_dh_auto_configure:
-	./bootstrap.py -- --with-gtest=/usr/src/gtest/
+	./configure.py --bootstrap --verbose
 
 override_dh_auto_build-arch:
 	./ninja -v all
