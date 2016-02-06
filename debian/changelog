@@ -5,6 +5,7 @@ ninja-build (1.6.0-1) UNRELEASED; urgency=medium
   * Fix value of default parallel level in man page. (Closes: #795747)
   * New upstream release. (Closes: #795748)
   * Drop libgtest-dev from build-depends, not used anymore.
+  * Pass CPPFLAGS to the build.
 
  -- Felix Geyer <fgeyer@debian.org>  Thu, 04 Feb 2016 22:24:18 +0100
 
