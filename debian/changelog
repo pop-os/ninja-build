@@ -4,7 +4,7 @@ ninja-build (1.6.0-1) UNRELEASED; urgency=medium
   * Generate man page on every build. (Closes: #776605)
   * Fix value of default parallel level in man page. (Closes: #795747)
   * New upstream release. (Closes: #795748)
-  * Drop libgtest-dev from build-depends, not used anymore.
+  * Clean up unused build-depends.
   * Pass CPPFLAGS to the build.
   * Drop ninja-build-doc package, only useful for developing ninja-build itself.
 
