@@ -7,10 +7,6 @@ Files: *
 Copyright: 2011-2014 Google
 License: Apache-2.0
 
-Files: platform_helper.py
-Copyright: 2013 Patrick von Reth <vonreth@kde.org>
-License: Apache-2.0
-
 Files: src/getopt.*
 Copyright: 1997 Gregory Pietsch
 License: other
@@ -23,6 +19,7 @@ License: other
 
 Files: debian/*
 Copyright: 2012 Gary Kramlich
+           2016 Felix Geyer
 License: Apache-2.0
 
 License: Apache-2.0
