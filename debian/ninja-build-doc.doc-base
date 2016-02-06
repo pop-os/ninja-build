@@ -1,9 +1,0 @@
-Document: ninja
-Title: Ninja Documentation
-Author: Gary Kramlich
-Section: Programming/C++
-
-Format: HTML
-Index: /usr/share/doc/ninja-build-doc/html/index.html
-Files: /usr/share/doc/ninja-build-doc/html/*
-

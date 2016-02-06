@@ -5,7 +5,6 @@ Maintainer: Felix Geyer <fgeyer@debian.org>
 Build-Depends: debhelper (>=9), python, asciidoc,
  re2c, help2man, xsltproc, docbook-xsl | docbook-xsl-ns, docbook-xml,
  doc-base, graphviz
-Build-Depends-Indep: doxygen
 Homepage: http://martine.github.com/ninja/
 Vcs-Git: https://anonscm.debian.org/git/collab-maint/ninja-build.git
 Vcs-Browser: http://anonscm.debian.org/cgit/collab-maint/ninja-build.git
@@ -24,20 +23,3 @@ Description: small build system closest in spirit to Make
  fast. It is born from the Chromium browser project, which has over 30,000
  source files and whose other build systems can take ten seconds to start
  building after changing one file. Ninja is under a second.
-
-Package: ninja-build-doc
-Architecture: all
-Section: doc
-Depends: ${misc:Depends}
-Description: documentation for ninja-build
- Ninja is yet another build system. It takes as input the interdependencies of
- files (typically source code and output executables) and orchestrates
- building them, quickly.
- .
- Ninja joins a sea of other build systems. Its distinguishing goal is to be
- fast. It is born from the Chromium browser project, which has over 30,000
- source files and whose other build systems can take ten seconds to start
- building after changing one file. Ninja is under a second.
- .
- This package contains the doxygen documentation for ninja.
-
