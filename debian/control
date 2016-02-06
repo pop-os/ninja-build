@@ -6,7 +6,7 @@ Build-Depends: debhelper (>=9), python, asciidoc, xsltproc, docbook-xsl, docbook
  re2c, help2man
 Homepage: http://martine.github.com/ninja/
 Vcs-Git: https://anonscm.debian.org/git/collab-maint/ninja-build.git
-Vcs-Browser: http://anonscm.debian.org/cgit/collab-maint/ninja-build.git
+Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/ninja-build.git
 Standards-Version: 3.9.6
 
 Package: ninja-build
