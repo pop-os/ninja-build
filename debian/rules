@@ -8,7 +8,7 @@ export DEB_CFLAGS_MAINT_APPEND=$(shell dpkg-buildflags --get CPPFLAGS)
 override_dh_auto_configure:
 	./configure.py --bootstrap --verbose
 
-override_dh_auto_build-arch:
+override_dh_auto_build:
 	./ninja -v all
 	./ninja -v manual
 	help2man --include=debian/ninja.1.in --output=debian/ninja.1 --no-info --no-discard-stderr ./ninja
