@@ -14,6 +14,9 @@ override_dh_auto_build:
 	help2man --include=debian/ninja.1.in --output=debian/ninja.1 --no-info --no-discard-stderr ./ninja
 	sed -i 's/\(default=\)[0-9]\+, \(derived from CPUs available\)/\1\2/g' debian/ninja.1
 
+override_dh_auto_test:
+	sh -c "ulimit -n 2000 && ./ninja_test"
+
 override_dh_clean:
 	dh_clean
 	test -x ninja && ./ninja -t clean || true
