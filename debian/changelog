@@ -7,6 +7,7 @@ ninja-build (1.6.0-1) UNRELEASED; urgency=medium
   * Clean up unused build-depends.
   * Pass CPPFLAGS to the build.
   * Drop ninja-build-doc package, only useful for developing ninja-build itself.
+  * Move bash-completion file to /usr/share/bash-completion/completions/.
 
  -- Felix Geyer <fgeyer@debian.org>  Thu, 04 Feb 2016 22:24:18 +0100
 

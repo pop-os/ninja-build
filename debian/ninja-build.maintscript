@@ -1,0 +1,1 @@
+rm_conffile /etc/bash_completion.d/ninja 1.6.0-1~
