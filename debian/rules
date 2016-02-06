@@ -1,7 +1,5 @@
 #!/usr/bin/make -f
 
-.PHONY: debian/ninja.1
-
 %:
 	dh $@
 
