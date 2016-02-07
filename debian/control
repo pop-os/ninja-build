@@ -2,8 +2,14 @@ Source: ninja-build
 Section: devel
 Priority: optional
 Maintainer: Felix Geyer <fgeyer@debian.org>
-Build-Depends: debhelper (>=9), python, asciidoc, xsltproc, docbook-xsl, docbook-xml,
- re2c, help2man
+Build-Depends: asciidoc,
+               debhelper (>= 9),
+               docbook-xml,
+               docbook-xsl,
+               help2man,
+               python,
+               re2c,
+               xsltproc
 Homepage: https://ninja-build.org/
 Vcs-Git: https://anonscm.debian.org/git/collab-maint/ninja-build.git
 Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/ninja-build.git
