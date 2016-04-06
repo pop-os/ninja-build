@@ -24,6 +24,7 @@ override_dh_clean:
 	dh_clean
 	test -x ninja && ./ninja -t clean || true
 	find -type f -iname "*.pyc" | xargs rm -f
+	rm -f null.o
 	rm -f build.ninja
 	rm -rf build
 
