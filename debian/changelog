@@ -3,6 +3,7 @@ ninja-build (1.7.2-1) UNRELEASED; urgency=medium
   * New upstream release.
   * Move zsh completion file to /usr/share/zsh/vendor-completions/.
     (Closes: #843575)
+  * Add -Wl,--as-needed to LDFLAGS.
 
  -- Felix Geyer <fgeyer@debian.org>  Fri, 11 Nov 2016 16:27:05 +0100
 
