@@ -32,6 +32,6 @@ override_dh_install-arch:
 	dh_install
 	mv debian/ninja-build/usr/share/bash-completion/completions/bash-completion \
 	   debian/ninja-build/usr/share/bash-completion/completions/ninja
-	mv debian/ninja-build/usr/share/zsh/functions/Completion/zsh-completion \
-	   debian/ninja-build/usr/share/zsh/functions/Completion/_ninja
+	mv debian/ninja-build/usr/share/zsh/vendor-completions/zsh-completion \
+	   debian/ninja-build/usr/share/zsh/vendor-completions/_ninja
 
