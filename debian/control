@@ -17,6 +17,7 @@ Standards-Version: 3.9.6
 
 Package: ninja-build
 Architecture: any
+Multi-Arch: foreign
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Conflicts: ninja
 Description: small build system closest in spirit to Make
