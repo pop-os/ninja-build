@@ -21,6 +21,12 @@ override_dh_auto_test:
 	# It allows more tests to run but some archs/buildds have a lower hard limit.
 	sh -c "ulimit -n 2000; ./ninja_test"
 
+override_dh_auto_install:
+	# noop
+
+override_dh_auto_clean:
+	# noop
+
 override_dh_clean:
 	dh_clean
 	test -x ninja && ./ninja -t clean || true
