@@ -17,9 +17,11 @@ override_dh_auto_build:
 	sed -i 's/\(default=\)[0-9]\+, \(derived from CPUs available\)/\1\2/g' build/ninja.1
 
 override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	# Deliberately ignore errors from ulimit.
 	# It allows more tests to run but some archs/buildds have a lower hard limit.
 	sh -c "ulimit -n 2000; ./ninja_test"
+endif
 
 override_dh_auto_install:
 	# noop

@@ -2,6 +2,7 @@ ninja-build (1.7.2-3) UNRELEASED; urgency=medium
 
   * Fix FTBFS with debhelper >= 10.3.
     - Add empty override targets for dh_auto_install and dh_auto_test.
+  * Skip unit tests when DEB_BUILD_OPTIONS=nocheck is set.
 
  -- Felix Geyer <fgeyer@debian.org>  Mon, 26 Jun 2017 19:20:56 +0200
 
