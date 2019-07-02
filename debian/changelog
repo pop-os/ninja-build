@@ -8,6 +8,7 @@ ninja-build (1.9.0-1) UNRELEASED; urgency=medium
 
   [ Felix Geyer ]
   * Drop Conflicts: ninja as that package has been removed.
+  * Drop obsolete /etc/bash-completion.d/ninja removal maintscript.
 
  -- Ondřej Nový <onovy@debian.org>  Mon, 01 Oct 2018 10:39:31 +0200
 
