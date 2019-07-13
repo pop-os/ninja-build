@@ -1,4 +1,4 @@
-ninja-build (1.9.0-1) UNRELEASED; urgency=medium
+ninja-build (1.9.0-1) unstable; urgency=medium
 
   * New upstream release. (Closes: #923545)
 
@@ -10,7 +10,7 @@ ninja-build (1.9.0-1) UNRELEASED; urgency=medium
   * Drop Conflicts: ninja as that package has been removed.
   * Drop obsolete /etc/bash-completion.d/ninja removal maintscript.
 
- -- Ondřej Nový <onovy@debian.org>  Mon, 01 Oct 2018 10:39:31 +0200
+ -- Felix Geyer <fgeyer@debian.org>  Sat, 13 Jul 2019 21:25:34 +0200
 
 ninja-build (1.8.2-1) unstable; urgency=medium
 
