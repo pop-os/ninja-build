@@ -12,10 +12,12 @@ override_dh_auto_configure:
 
 override_dh_auto_build:
 	./ninja -v all
+ifeq (,$(filter nodoc,$(DEB_BUILD_PROFILES)))
 	./ninja -v manual
 	help2man --include=debian/ninja.1.in --output=build/ninja.1.org --no-info --no-discard-stderr ./ninja
 	sed 's/\(default=\)[0-9]\+ on this system/\1\#CPUs/' build/ninja.1.org > build/ninja.1
 	if cmp --silent build/ninja.1.org build/ninja.1; then echo "sed pattern not found"; exit 1; fi
+endif
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))

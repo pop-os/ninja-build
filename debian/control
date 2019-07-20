@@ -2,11 +2,11 @@ Source: ninja-build
 Section: devel
 Priority: optional
 Maintainer: Felix Geyer <fgeyer@debian.org>
-Build-Depends: asciidoc,
+Build-Depends: asciidoc <!nodoc>,
                debhelper-compat (= 12),
-               docbook-xml,
-               docbook-xsl,
-               help2man,
+               docbook-xml <!nodoc>,
+               docbook-xsl <!nodoc>,
+               help2man <!nodoc>,
                python,
                re2c,
                xsltproc

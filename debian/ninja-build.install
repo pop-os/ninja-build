@@ -1,4 +1,3 @@
-doc/manual.html usr/share/doc/ninja-build/html
 misc/bash-completion usr/share/bash-completion/completions/
 misc/ninja-mode.el usr/share/emacs/site-lisp
 misc/ninja.vim usr/share/vim/addons/syntax

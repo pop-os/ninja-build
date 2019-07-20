@@ -7,6 +7,6 @@ Abstract: Ninja is yet another build system.  It takes as input the
 Section: Programming
 
 Format: html
-Index: /usr/share/doc/ninja-build/html/manual.html
-Files: /usr/share/doc/ninja-build/html/*
+Index: /usr/share/doc/ninja-build/manual.html
+Files: /usr/share/doc/ninja-build/manual.html
 
