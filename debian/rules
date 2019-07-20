@@ -13,8 +13,9 @@ override_dh_auto_configure:
 override_dh_auto_build:
 	./ninja -v all
 	./ninja -v manual
-	help2man --include=debian/ninja.1.in --output=build/ninja.1 --no-info --no-discard-stderr ./ninja
-	sed -i 's/\(default=\)[0-9]\+, \(derived from CPUs available\)/\1\2/g' build/ninja.1
+	help2man --include=debian/ninja.1.in --output=build/ninja.1.org --no-info --no-discard-stderr ./ninja
+	sed 's/\(default=\)[0-9]\+ on this system/\1\#CPUs/' build/ninja.1.org > build/ninja.1
+	if cmp --silent build/ninja.1.org build/ninja.1; then echo "sed pattern not found"; exit 1; fi
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
@@ -43,4 +44,3 @@ override_dh_install-arch:
 	   debian/ninja-build/usr/share/bash-completion/completions/ninja
 	mv debian/ninja-build/usr/share/zsh/vendor-completions/zsh-completion \
 	   debian/ninja-build/usr/share/zsh/vendor-completions/_ninja
-
