@@ -1,3 +1,9 @@
+ninja-build (1.9.0-3) UNRELEASED; urgency=medium
+
+  * Switch build to python3.
+
+ -- Felix Geyer <fgeyer@debian.org>  Thu, 29 Aug 2019 19:21:07 +0200
+
 ninja-build (1.9.0-2) unstable; urgency=medium
 
   * Make build reproducible again. (Closes: #932117)

@@ -8,7 +8,7 @@ export DEB_LDFLAGS_MAINT_APPEND=-Wl,--as-needed
 	dh $@
 
 override_dh_auto_configure:
-	./configure.py --bootstrap --verbose
+	python3 ./configure.py --bootstrap --verbose
 
 override_dh_auto_build:
 	./ninja -v all

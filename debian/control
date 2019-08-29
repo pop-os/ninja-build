@@ -7,7 +7,7 @@ Build-Depends: asciidoc <!nodoc>,
                docbook-xml <!nodoc>,
                docbook-xsl <!nodoc>,
                help2man <!nodoc>,
-               python,
+               python3,
                re2c,
                xsltproc <!nodoc>,
 Homepage: https://ninja-build.org/
