@@ -19,6 +19,7 @@ Package: ninja-build
 Architecture: any
 Multi-Arch: foreign
 Depends: ${misc:Depends}, ${shlibs:Depends}
+Suggests: python3
 Description: small build system closest in spirit to Make
  Ninja is yet another build system. It takes as input the interdependencies of
  files (typically source code and output executables) and orchestrates

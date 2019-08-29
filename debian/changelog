@@ -1,6 +1,7 @@
 ninja-build (1.9.0-3) UNRELEASED; urgency=medium
 
   * Switch build to python3.
+  * Add python3 to Suggests as it's used for 'ninja -t browse'.
 
  -- Felix Geyer <fgeyer@debian.org>  Thu, 29 Aug 2019 19:21:07 +0200
 
