@@ -1,3 +1,9 @@
+ninja-build (1.10.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Felix Geyer <fgeyer@debian.org>  Sun, 30 Aug 2020 11:40:43 +0200
+
 ninja-build (1.10.0-2) unstable; urgency=medium
 
   * Cherry-pick patch to fix ninja -t browse with Python >= 3.8.
