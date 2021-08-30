@@ -1,3 +1,9 @@
+ninja-build (1.10.1-1pop0) impish; urgency=medium
+
+  * Fix 32-bit builds using ninja inside sbuild
+
+ -- Jeremy Soller <jeremy@system76.com>  Mon, 30 Aug 2021 12:35:14 -0600
+
 ninja-build (1.10.1-1) unstable; urgency=medium
 
   * New upstream release.
