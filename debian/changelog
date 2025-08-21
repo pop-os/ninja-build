@@ -1,3 +1,9 @@
+ninja-build (1.10.1-1pop1) jammy; urgency=medium
+
+  * No-change version bump to trigger arm builds
+
+ -- Jeremy Soller <jeremy@system76.com>  Thu, 21 Aug 2025 09:40:54 -0600
+
 ninja-build (1.10.1-1pop0) impish; urgency=medium
 
   * Fix 32-bit builds using ninja inside sbuild
